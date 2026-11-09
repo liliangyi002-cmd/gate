@@ -325,7 +325,7 @@ class Config:
             min_success_ratio=_env_float("MIN_SUCCESS_RATIO", 0.0, minimum=0.0),
             max_residential_per_country=_env_int("MAX_RESIDENTIAL_PER_COUNTRY", 8),
             max_datacenter_per_country=_env_int("MAX_DATACENTER_PER_COUNTRY", 0),
-            max_latency_ms=_env_int("MAX_LATENCY_MS", 4000),
+            max_latency_ms=_env_int("MAX_LATENCY_MS", 10000),
             residential_only=os.environ.get("RESIDENTIAL_ONLY", "1").strip().lower() not in {"0", "false", "no"},
         )
 
