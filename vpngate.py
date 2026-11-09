@@ -289,6 +289,8 @@ class Config:
     min_success_ratio: float
     max_residential_per_country: int
     max_datacenter_per_country: int
+    max_latency_ms: int
+    residential_only: bool
 
     @classmethod
     def load(cls) -> "Config":
@@ -321,8 +323,10 @@ class Config:
             optimal_api=os.environ.get("OPTIMAL_API", DEFAULT_OPTIMAL_API),
             nodes_url=derive_nodes_url(),
             min_success_ratio=_env_float("MIN_SUCCESS_RATIO", 0.0, minimum=0.0),
-            max_residential_per_country=_env_int("MAX_RESIDENTIAL_PER_COUNTRY", 20),
-            max_datacenter_per_country=_env_int("MAX_DATACENTER_PER_COUNTRY", 10),
+            max_residential_per_country=_env_int("MAX_RESIDENTIAL_PER_COUNTRY", 8),
+            max_datacenter_per_country=_env_int("MAX_DATACENTER_PER_COUNTRY", 0),
+            max_latency_ms=_env_int("MAX_LATENCY_MS", 4000),
+            residential_only=os.environ.get("RESIDENTIAL_ONLY", "1").strip().lower() not in {"0", "false", "no"},
         )
 
 
@@ -779,8 +783,22 @@ def build_outputs(
     worker_host: str,
     duration_s: float,
     timed_out: int,
+    cfg: Config,
 ) -> dict[str, Any]:
     available = [r for r in results if r.get("success")]
+    before = len(available)
+    if cfg.max_latency_ms > 0:
+        available = [
+            r for r in available
+            if r.get("latency_ms") is not None and float(r.get("latency_ms") or 0) <= cfg.max_latency_ms
+        ]
+    if cfg.residential_only:
+        available = [r for r in available if r.get("residential") == "residential"]
+    if before != len(available):
+        log(
+            "FILTER",
+            f"筛选后保留 {len(available)}/{before}（MAX_LATENCY_MS={cfg.max_latency_ms}, RESIDENTIAL_ONLY={cfg.residential_only}）",
+        )
     countries: dict[str, dict[str, Any]] = {}
     for node in available:
         code = (node.get("country_code") or "").upper() or "??"
@@ -987,6 +1005,7 @@ def main() -> None:
         worker_host=worker_host,
         duration_s=time.time() - started,
         timed_out=timed_out,
+        cfg=cfg,
     )
 
     edge_hosts = get_combined_edge_hosts(cfg, session)
