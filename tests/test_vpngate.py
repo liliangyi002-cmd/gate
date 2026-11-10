@@ -28,6 +28,8 @@ def make_config(**overrides):
         min_success_ratio=0.0,
         max_residential_per_country=20,
         max_datacenter_per_country=10,
+        max_latency_ms=10000,
+        residential_only=False,
     )
     values.update(overrides)
     return vpngate.Config(**values)
@@ -280,6 +282,7 @@ def test_build_outputs_stats_and_country_grouping():
         worker_host="worker.example.com",
         duration_s=12.34,
         timed_out=0,
+        cfg=make_config(residential_only=False, max_latency_ms=10000),
     )
     assert data["schema_version"] == vpngate.SCHEMA_VERSION
     assert data["stats"]["success"] == 2
